@@ -1,7 +1,7 @@
 import { generateResponse } from "../config/openRouter.js";
 import User from "../models/user.model.js";
 import Website from "../models/website.model.js";
-import extractJson from "../utils/extractJson.js";
+import extractCodeResponse from "../utils/extractCodeResponse.js";
 
 const masterPrompt = `
 You are a WORLD-CLASS Principal Frontend Architect, Senior Product Designer, Creative Director, and Elite UI/UX Engineer.
@@ -205,22 +205,22 @@ CODE QUALITY:
 - Accessible structure
 
 OUTPUT FORMAT:
-Return ONLY raw valid JSON.
+Respond with EXACTLY this structure and nothing else before or after it.
+Do NOT wrap the code in JSON and do NOT escape it - output the raw HTML directly.
 
-FORMAT:
-{
-  "message": "Professional confirmation sentence",
-  "code": "<FULL COMPLETE HTML DOCUMENT>"
-}
+@@MESSAGE@@
+<one professional confirmation sentence>
+@@CODE@@
+<FULL COMPLETE HTML DOCUMENT, ending with </html>>
 
 ABSOLUTE RULES:
-- RAW JSON ONLY
+- NO JSON
 - NO markdown
 - NO backticks
-- NO explanations
+- NO explanations outside the format above
 - NO extra text
 - NO truncation
-- FULL website only
+- FULL website only, must end with </html>
 - FINISHED production-ready result
 `;
 
@@ -244,16 +244,26 @@ export const generateWebsite = async (req, res) => {
 
     const finalPrompt = masterPrompt.replace("USER_PROMPT", prompt);
     let raw = await generateResponse(finalPrompt);
-    let parsed = await extractJson(raw);
+    let parsed = await extractCodeResponse(raw);
 
     if (!parsed) {
-      raw = await generateResponse(finalPrompt + "\n\nRETURN ONLY RAW JSON.");
-      parsed = await extractJson(raw);
+      raw = await generateResponse(
+        finalPrompt + "\n\nFOLLOW THE EXACT @@MESSAGE@@ / @@CODE@@ FORMAT.",
+      );
+      parsed = await extractCodeResponse(raw);
     }
 
     if (!parsed?.code) {
       console.log("ai returned invalid response", raw);
       return res.status(400).json({ message: "ai returned invalid response" });
+    }
+
+    if (!parsed.complete) {
+      console.log("ai response was truncated, length:", raw?.length);
+      return res.status(400).json({
+        message:
+          "The generated website was too large and got cut off. Try a shorter or more specific description.",
+      });
     }
 
     const website = await Website.create({
@@ -338,23 +348,35 @@ ${website.latestCode}
 USER REQUEST:
 ${prompt}
 
-RETURN RAW JSON ONLY:
-{
-  "message": "Short confirmation",
-  "code": "<UPDATED FULL HTML>"
-}`;
+Respond with EXACTLY this structure and nothing else before or after it.
+Do NOT wrap the code in JSON and do NOT escape it - output the raw HTML directly.
+
+@@MESSAGE@@
+<short confirmation sentence>
+@@CODE@@
+<UPDATED FULL HTML DOCUMENT, ending with </html>>`;
 
     let raw = await generateResponse(updatePrompt);
-    let parsed = await extractJson(raw);
+    let parsed = await extractCodeResponse(raw);
 
     if (!parsed) {
-      raw = await generateResponse(updatePrompt + "\n\nRETURN ONLY RAW JSON.");
-      parsed = await extractJson(raw);
+      raw = await generateResponse(
+        updatePrompt + "\n\nFOLLOW THE EXACT @@MESSAGE@@ / @@CODE@@ FORMAT.",
+      );
+      parsed = await extractCodeResponse(raw);
     }
 
     if (!parsed?.code) {
       console.log("ai returned invalid response", raw);
       return res.status(400).json({ message: "ai returned invalid response" });
+    }
+
+    if (!parsed.complete) {
+      console.log("ai response was truncated, length:", raw?.length);
+      return res.status(400).json({
+        message:
+          "The generated update was too large and got cut off. Try a shorter or more specific request.",
+      });
     }
 
     website.conversation.push(
