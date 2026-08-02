@@ -8,14 +8,15 @@ const model = "deepseek/deepseek-chat";
 // error instead of the proxy silently killing the connection, which shows
 // up in the browser as a bogus "CORS blocked" / network error.
 const REQUEST_TIMEOUT_MS = 45000;
+const DEFAULT_MAX_TOKENS = 8000;
+const MIN_USABLE_TOKENS = 1500;
 
-export const generateResponse = async (prompt) => {
+const callOpenRouter = async (prompt, maxTokens) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  let res;
   try {
-    res = await fetch(openRouterUrl, {
+    return await fetch(openRouterUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -35,7 +36,7 @@ export const generateResponse = async (prompt) => {
           },
         ],
         temperature: 0.2,
-        max_tokens: 8000,
+        max_tokens: maxTokens,
       }),
       signal: controller.signal,
     });
@@ -47,10 +48,35 @@ export const generateResponse = async (prompt) => {
   } finally {
     clearTimeout(timeout);
   }
+};
+
+export const generateResponse = async (prompt) => {
+  let res = await callOpenRouter(prompt, DEFAULT_MAX_TOKENS);
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error("open router error" + err);
+    const errText = await res.text();
+
+    // OpenRouter tells us exactly how many tokens the account can currently
+    // afford on a 402 - retry once at that budget instead of hard-failing
+    // when the balance is just lower than our default, not empty.
+    const affordMatch = errText.match(/can only afford (\d+)/i);
+    if (res.status === 402 && affordMatch) {
+      const affordable = Number(affordMatch[1]) - 200;
+
+      if (affordable >= MIN_USABLE_TOKENS) {
+        res = await callOpenRouter(prompt, affordable);
+        if (res.ok) {
+          const data = await res.json();
+          return data.choices[0].message.content;
+        }
+      }
+
+      throw new Error(
+        "open router error: AI credit balance is too low to generate this website. Add credits at https://openrouter.ai/settings/credits",
+      );
+    }
+
+    throw new Error("open router error" + errText);
   }
 
   const data = await res.json();

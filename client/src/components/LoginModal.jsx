@@ -121,7 +121,7 @@ function LoginModal({ open, onClose }) {
                     alt="google"
                     className="w-5 h-5 brightness-0 invert"
                   />
-                  Continue with Google
+                  Continue
                 </motion.button>
 
                 <div className="flex items-center gap-4 my-8">
