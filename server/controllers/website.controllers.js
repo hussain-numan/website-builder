@@ -242,19 +242,15 @@ export const generateWebsite = async (req, res) => {
     }
 
     const finalPrompt = masterPrompt.replace("USER_PROMPT", prompt);
-    let raw = "";
-    let parsed = null;
-    for (let i = 0; i < 2 && !parsed; i++) {
-      raw = await generateResponse(finalPrompt);
-      parsed = await extractJson(raw);
+    let raw = await generateResponse(finalPrompt);
+    let parsed = await extractJson(raw);
 
-      if (!parsed) {
-        raw = await generateResponse(finalPrompt + "\n\nRETURN ONLY RAW JSON.");
-        parsed = await extractJson(raw);
-      }
+    if (!parsed) {
+      raw = await generateResponse(finalPrompt + "\n\nRETURN ONLY RAW JSON.");
+      parsed = await extractJson(raw);
     }
 
-    if (!parsed.code) {
+    if (!parsed?.code) {
       console.log("ai returned invalid response", raw);
       return res.status(400).json({ message: "ai returned invalid response" });
     }
@@ -346,21 +342,15 @@ RETURN RAW JSON ONLY:
   "code": "<UPDATED FULL HTML>"
 }`;
 
-    let raw = "";
-    let parsed = null;
-    for (let i = 0; i < 2 && !parsed; i++) {
-      raw = await generateResponse(updatePrompt);
-      parsed = await extractJson(raw);
+    let raw = await generateResponse(updatePrompt);
+    let parsed = await extractJson(raw);
 
-      if (!parsed) {
-        raw = await generateResponse(
-          updatePrompt + "\n\nRETURN ONLY RAW JSON.",
-        );
-        parsed = await extractJson(raw);
-      }
+    if (!parsed) {
+      raw = await generateResponse(updatePrompt + "\n\nRETURN ONLY RAW JSON.");
+      parsed = await extractJson(raw);
     }
 
-    if (!parsed.code) {
+    if (!parsed?.code) {
       console.log("ai returned invalid response", raw);
       return res.status(400).json({ message: "ai returned invalid response" });
     }

@@ -37,7 +37,7 @@ export const billing = async (req, res) => {
         plan: plan.plan,
       },
 
-      success_url: `${process.env.FRONTEND_URL}/`,
+      success_url: `${process.env.FRONTEND_URL}/?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/pricing`,
     });
 

@@ -58,6 +58,31 @@ function Home() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("session_id")) return;
+
+    // Landed here from Stripe checkout. The webhook that actually credits
+    // the account can take a moment to arrive, so re-fetch after a short
+    // delay instead of trusting the credits loaded on initial page mount.
+    const timer = setTimeout(async () => {
+      try {
+        const result = await axios.get(`${serverUrl}/api/user/me`, {
+          withCredentials: true,
+        });
+        dispatch(setUserData(result.data));
+      } catch (error) {
+        console.log(error);
+      } finally {
+        params.delete("session_id");
+        const query = params.toString();
+        navigate(`/${query ? `?${query}` : ""}`, { replace: true });
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (!userData) return;
     const handleGetAllWebsites = async () => {
       try {
