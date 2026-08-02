@@ -227,6 +227,7 @@ ABSOLUTE RULES:
 export const generateWebsite = async (req, res) => {
   try {
     const { prompt } = req.body;
+    console.log("Generate Website Request:", prompt);
     if (!prompt) {
       return res.status(400).json({ message: "prompt is required" });
     }
@@ -279,6 +280,7 @@ export const generateWebsite = async (req, res) => {
       remainingCredits: user.credits,
     });
   } catch (error) {
+    console.error("Generate Website Error:", error);
     return res
       .status(500)
       .json({ message: `generate website error : ${error}` });
@@ -373,6 +375,7 @@ RETURN RAW JSON ONLY:
       remainingCredits: user.credits,
     });
   } catch (error) {
+    console.error("Update Website Error:", error);
     return res.status(500).json({ message: `update website error : ${error}` });
   }
 };
