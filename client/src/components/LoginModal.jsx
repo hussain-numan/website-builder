@@ -31,7 +31,7 @@ function LoginModal({ open, onClose }) {
         },
         {
           withCredentials: true,
-        }
+        },
       );
 
       console.log("Backend Response:", data);
@@ -48,7 +48,12 @@ function LoginModal({ open, onClose }) {
       console.error("Google Login Error:", error);
 
       if (error.response) {
-        console.log("Backend Error:", error.response.data);
+        console.log("Status:", error.response.status);
+        console.log("Response:", error.response.data);
+      } else if (error.request) {
+        console.log("No response received:", error.request);
+      } else {
+        console.log("Error:", error.message);
       }
 
       alert(error.message);
@@ -121,15 +126,13 @@ function LoginModal({ open, onClose }) {
 
                 <div className="flex items-center gap-4 my-8">
                   <div className="h-px flex-1 bg-white/10" />
-                  <span className="text-xs text-zinc-500">
-                    Secure Login
-                  </span>
+                  <span className="text-xs text-zinc-500">Secure Login</span>
                   <div className="h-px flex-1 bg-white/10" />
                 </div>
 
                 <p className="text-xs text-zinc-500 leading-relaxed">
-                  By continuing, you agree to our Terms of Service and
-                  Privacy Policy.
+                  By continuing, you agree to our Terms of Service and Privacy
+                  Policy.
                 </p>
               </div>
             </div>

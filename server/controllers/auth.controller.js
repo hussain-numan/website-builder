@@ -1,47 +1,69 @@
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
 export const googleAuth = async (req, res) => {
   try {
-    const { name, email, avatar } = req.body;
+    console.log(req.body);
 
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
-    }
+    const { name, email, avatar } = req.body;
 
     let user = await User.findOne({ email });
 
     if (!user) {
-      user = await User.create({ name, email, avatar });
+      user = await User.create({
+        name,
+        email,
+        avatar,
+      });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    const token = jwt.sign(
+      {
+        id: user._id,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      token,
+      user,
     });
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+  } catch (err) {
+    console.error(err);
 
-    return res.status(200).json({ message: "Authentication successful", user });
-  } catch (error) {
-    return res.status(500).json({ message: `google auth error ${error}` });
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
 
 export const logout = (req, res) => {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "strict",
-    });
+    res.clearCookie("token", cookieOptions);
 
-    return res.status(200).json({ message: "logout Successful" });
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
   } catch (error) {
-    return res.status(500).json({ message: `logout error ${error}` });
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
