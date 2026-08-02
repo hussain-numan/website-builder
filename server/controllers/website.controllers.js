@@ -389,8 +389,18 @@ RETURN RAW JSON ONLY:
 
 export const getAll = async (req, res) => {
   try {
-    const websites = await Website.find({ user: req.user._id });
-    return res.status(200).json(websites);
+    const websites = await Website.find({ user: req.user._id }).lean();
+
+    // Recompute the public URL from the current FRONTEND_URL instead of the
+    // value stored at deploy time, so links stay correct even if the domain
+    // config changes after a site was deployed.
+    const withFreshUrls = websites.map((w) =>
+      w.deployed
+        ? { ...w, deployUrl: `${process.env.FRONTEND_URL}/site/${w.slug}` }
+        : w,
+    );
+
+    return res.status(200).json(withFreshUrls);
   } catch (error) {
     return res
       .status(500)
@@ -433,10 +443,12 @@ export const deploy = async (req, res) => {
 
 export const getBySlug = async (req, res) => {
   try {
+    // Public route: anyone with the link can view a deployed site, so this
+    // intentionally does not require auth or filter by owner.
     const website = await Website.findOne({
       slug: req.params.slug,
-      user: req.user._id,
-    })
+      deployed: true,
+    }).select("title latestCode slug")
 
     if (!website) {
       return res.status(400).json({ message: "website not found" })
