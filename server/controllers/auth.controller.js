@@ -3,16 +3,24 @@ import jwt from "jsonwebtoken";
 
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  secure: true, // HTTPS production
+  sameSite: "none",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
 export const googleAuth = async (req, res) => {
   try {
+    console.log("Google Auth Request:");
     console.log(req.body);
 
     const { name, email, avatar } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
 
     let user = await User.findOne({ email });
 
@@ -22,6 +30,10 @@ export const googleAuth = async (req, res) => {
         email,
         avatar,
       });
+    } else {
+      user.name = name;
+      user.avatar = avatar;
+      await user.save();
     }
 
     const token = jwt.sign(
@@ -34,18 +46,19 @@ export const googleAuth = async (req, res) => {
       }
     );
 
+    res.cookie("token", token, cookieOptions);
+
     return res.status(200).json({
       success: true,
-      token,
+      message: "Login successful",
       user,
     });
-
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Google Auth Error:", error);
 
     return res.status(500).json({
       success: false,
-      error: err.message,
+      message: error.message,
     });
   }
 };
