@@ -1,10 +1,11 @@
-import stripe from "../config/stripe";
+import getStripe from "../config/stripe.js";
 import User from "../models/user.model.js";
 
 export const stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
@@ -12,7 +13,7 @@ export const stripeWebhook = async (req, res) => {
     );
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: "webhook error" });
+    return res.status(400).json({ message: "webhook error" });
   }
 
   if (event.type === "checkout.session.completed") {

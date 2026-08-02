@@ -1,5 +1,5 @@
 import { PLANS } from "../config/plan.js";
-import stripe from "../config/stripe.js";
+import getStripe from "../config/stripe.js";
 
 export const billing = async (req, res) => {
   try {
@@ -12,6 +12,8 @@ export const billing = async (req, res) => {
         message: "invalid paid plan",
       });
     }
+
+    const stripe = getStripe();
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
